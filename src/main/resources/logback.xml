@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration debug="false" scan="true" scanPeriod="60 seconds">
+
+
+    <!-- 日志名称 -->
+    <property name="log.app_name" value="${log.app-name:-service-A}"/>
+    <!-- 日志输出位置 -->
+    <property name="log.home_dir" value="${log.home:-./logs}"></property>
+    <!-- 日志最大保留天数 -->
+    <property name="log.max_history" value="30"></property>
+    <!-- 日志文件最大的大小 -->
+    <property name="log.max_size" value="500MB"></property>
+    <!-- 日志输出格式 -->
+    <property name="log.pattern" value="%-20(%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread]) %-5level %logger{80}[%L] - %msg%n"></property>
+    <property name="log.pattern.console" value="%red(%d{yyyy-MM-dd HH:mm:ss}) %green([%thread]) %highlight(%-5level) %boldMagenta(%logger) - %cyan(%msg%n)"/>
+
+    <!-- 日志输出位置:控制台 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <!-- 过滤器，过滤掉不是指定日志水平的日志 -->
+            <level>DEBUG</level>
+        </filter>
+        <encoder>
+            <pattern>${log.pattern.console}</pattern>
+        </encoder>
+    </appender>
+
+
+    <!-- 日志输出位置:磁盘（包含所有级别） -->
+    <appender name="file-all" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>DEBUG</level>
+        </filter>
+        <file>${log.home_dir}/${log.app_name}-all.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log.home_dir}/${log.app_name}-all.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
+            <maxFileSize>${log.max_size}</maxFileSize>
+            <maxHistory>${log.max_history}</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+        </encoder>
+    </appender>
+
+
+    <!-- 日志输出位置:磁盘（只包含错误级别） -->
+    <appender name="file-error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <file>${log.home_dir}/${log.app_name}-error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log.home_dir}/${log.app_name}-error.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
+            <maxFileSize>${log.max_size}</maxFileSize>
+            <maxHistory>${log.max_history}</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+        </encoder>
+    </appender>
+
+
+    <root>
+        <!-- 定义通用包（根）的日志输出级别 -->
+        <level value="info"/>
+        <!-- 需要输出到哪些位置 -->
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="file-all"/>
+        <appender-ref ref="file-error"/>
+    </root>
+</configuration>
