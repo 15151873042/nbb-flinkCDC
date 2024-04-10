@@ -63,7 +63,7 @@
 
     <root>
         <!-- 定义通用包（根）的日志输出级别 -->
-        <level value="info"/>
+        <level value="warn"/>
         <!-- 需要输出到哪些位置 -->
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="file-all"/>
