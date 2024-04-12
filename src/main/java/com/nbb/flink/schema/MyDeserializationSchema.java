@@ -14,9 +14,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class MyDeserializationSchema implements DebeziumDeserializationSchema<CdcDO> {
 
@@ -26,52 +28,52 @@ public class MyDeserializationSchema implements DebeziumDeserializationSchema<Cd
     @Override
     public void deserialize(SourceRecord sourceRecord, Collector<CdcDO> collector) throws Exception {
 
-        // topic='mysql_binlog_source.gmall2021.base_trademark'
-        // 获取databaeName和tableName
+        // 获取databaseName和tableName
         String[] split = sourceRecord.topic().split("\\.");
         String databaseName = split[1];
         String tableName = split[2];
 
         Struct valueStruct = (Struct)sourceRecord.value();
-        // 解析before
-        Map<String, Object> beforeData = new HashMap<>();
 
+        // 解析before
+        Map<String, Object> beforeData = Collections.emptyMap();
         Struct beforeStruct = valueStruct.getStruct("before");
         if (null != beforeStruct) {
             List<Field> beforeFields = beforeStruct.schema().fields();
-            for (Field beforeField : beforeFields) {
-                String key = beforeField.name();
-                Object value  = beforeStruct.get(beforeField);
-
-                // 类型转换
-                value = fieldValueTransition(beforeField, value);
-
-                beforeData.put(key, value);
-            }
+            beforeData = beforeFields.stream()
+                    .collect(Collectors.toMap(
+                            field -> field.name(),
+                            field -> {
+                                Object originFieldValue = beforeStruct.get(field);
+                                Object finalFieldValue = fieldValueTransition(field, originFieldValue);
+                                return finalFieldValue;
+                            }
+                    ));
         }
         // 解析after
-        Map<String, Object> afterData = new HashMap<>();
+        Map<String, Object> afterData = Collections.emptyMap();
         Struct afterStruct = valueStruct.getStruct("after");
         if (null != afterStruct) {
             List<Field> afterFields = afterStruct.schema().fields();
-            for (Field afterField : afterFields) {
-                String key = afterField.name();
-                Object value  = afterStruct.get(afterField);
-
-                value = fieldValueTransition(afterField, value);
-                afterData.put(key, value);
-            }
+            afterData = afterFields.stream()
+                    .collect(Collectors.toMap(
+                            field -> field.name(),
+                            field -> {
+                                Object originFieldValue = afterStruct.get(field);
+                                Object finalFieldValue = fieldValueTransition(field, originFieldValue);
+                                return finalFieldValue;
+                            }
+                    ));
         }
 
         //获取操作类型 READ DELETE UPDATE CREATE
-        Envelope.Operation operation =
-                Envelope.operationFor(sourceRecord);
+        Envelope.Operation operation = Envelope.operationFor(sourceRecord);
         CdcDO cdcDO = new CdcDO();
-        cdcDO.databaseName = databaseName;
-        cdcDO.tableName = tableName;
-        cdcDO.operation = operation;
-        cdcDO.before = beforeData;
-        cdcDO.after = afterData;
+        cdcDO.setDatabaseName(databaseName);
+        cdcDO.setTableName(tableName);
+        cdcDO.setOperation(operation);
+        cdcDO.setBefore(beforeData);
+        cdcDO.setAfter(afterData);
 
         collector.collect(cdcDO);
     }
