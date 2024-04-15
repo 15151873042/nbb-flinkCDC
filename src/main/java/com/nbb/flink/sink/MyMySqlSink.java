@@ -1,8 +1,9 @@
 package com.nbb.flink.sink;
 
-import cn.hutool.core.util.CharsetUtil;
+import cn.hutool.core.util.HexUtil;
 import cn.hutool.core.util.ObjUtil;
-import cn.hutool.crypto.symmetric.SymmetricCrypto;
+import cn.hutool.crypto.SmUtil;
+import cn.hutool.crypto.symmetric.SM4;
 import com.nbb.flink.domain.CdcDO;
 import io.debezium.data.Envelope;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,9 @@ public class MyMySqlSink extends RichSinkFunction<CdcDO> {
     private String password;
     private Connection connection;
 
+    private static final String sm4Key = "668ce654850b9c9d0d707e22740042d3";
+
+    private static final SM4 sm4 = SmUtil.sm4(HexUtil.decodeHex(sm4Key));
 
 
 
@@ -88,10 +92,10 @@ public class MyMySqlSink extends RichSinkFunction<CdcDO> {
             Object id = after.get("id");
             Set<String> keys = after.keySet();
             Collection<Object> values = after.values();
-//            List<String> encryptValues = values.stream().map(v -> entryField(id.toString(), (String)v)).collect(Collectors.toList());
+            List<String> encryptValues = values.stream().map(v -> entryField(id, v)).collect(Collectors.toList());
             String insertSql = "insert into " + tableName + "(" +
                     StringUtils.join(keys, ",") + ") values('" +
-                    StringUtils.join(values, "', '") + "')";
+                    StringUtils.join(encryptValues, "', '") + "')";
             return Collections.singletonList(insertSql);
         } else if (operation == Envelope.Operation.UPDATE){
 
@@ -100,10 +104,10 @@ public class MyMySqlSink extends RichSinkFunction<CdcDO> {
 
             Set<String> keys = after.keySet();
             Collection<Object> values = after.values();
-//            List<String> encryptValues = values.stream().map(v -> entryField(id.toString(), (String)v)).collect(Collectors.toList());
+            List<String> encryptValues = values.stream().map(v -> entryField(id, v)).collect(Collectors.toList());
             String insertSql = "insert into " + tableName + "(" +
                     StringUtils.join(keys, ",") + ") values('" +
-                    StringUtils.join(values, "', '") + "')";
+                    StringUtils.join(encryptValues, "', '") + "')";
             return Arrays.asList(deleteSql, insertSql);
 
         } else if (operation == Envelope.Operation.DELETE) {
@@ -140,17 +144,20 @@ public class MyMySqlSink extends RichSinkFunction<CdcDO> {
 
     }
 
-//    public Object entryField(Object id, Object fieldValue) {
-//        if (ObjUtil.isNull(fieldValue)) {
-//            return null;
-//        }
-//
-//
-//        SymmetricCrypto sm4 = new SymmetricCrypto("加密密钥" + "_" + id);
-//        String encryptHex = sm4.encryptHex(fieldValue);
-//        String decryptStr = sm4.decryptStr(encryptHex, CharsetUtil.CHARSET_UTF_8);//test中文
-//        return decryptStr;
-//    }
+    private Map<String, Object> encrypt(Map<String, Object> originFieldMap) {
+        return null;
+    }
 
+    public String entryField(Object id, Object fieldValue) {
+        if (ObjUtil.isNull(fieldValue)) {
+            return null;
+        }
+        if (id.equals(fieldValue)) {
+            return id.toString();
+        }
+
+        SM4 sm4 = SmUtil.sm4(HexUtil.decodeHex(sm4Key));
+        return sm4.encryptHex(fieldValue.toString());
+    }
 
 }
