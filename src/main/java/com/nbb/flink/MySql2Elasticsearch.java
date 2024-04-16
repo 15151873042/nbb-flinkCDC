@@ -28,8 +28,8 @@ public class MySql2Elasticsearch {
                 .username("root")
                 .password("root")
                 .serverTimeZone("Asia/Shanghai")
-                .databaseList("cdc_test")
-                .tableList("cdc_test.*")
+                .databaseList("flink_cdc")
+                .tableList("flink_cdc.user")
                 .deserializer(new CustomerDeserializationSchema())
                 .startupOptions(StartupOptions.initial()) // 整库同步，全量 + 增量
                 .build();

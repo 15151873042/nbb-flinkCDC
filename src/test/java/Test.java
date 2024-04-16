@@ -3,6 +3,8 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.ConfigConstants;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.file.src.FileSource;
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat;
 import org.apache.flink.core.fs.Path;
@@ -16,8 +18,11 @@ public class Test {
 
 
     public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        Configuration config = new Configuration();
+        config.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(config);
         env.setRuntimeMode(RuntimeExecutionMode.BATCH);
+        env.setParallelism(5);
 
         FileSource<String> source = FileSource.forRecordStreamFormat(new TextLineInputFormat(), new Path("input/word.txt")).build();
 
