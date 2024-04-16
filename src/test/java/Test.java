@@ -1,6 +1,7 @@
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.ConfigConstants;
@@ -22,13 +23,13 @@ public class Test {
         config.setBoolean(ConfigConstants.LOCAL_START_WEBSERVER, true);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(config);
         env.setRuntimeMode(RuntimeExecutionMode.BATCH);
-        env.setParallelism(5);
+//        env.setParallelism(3);
 
         FileSource<String> source = FileSource.forRecordStreamFormat(new TextLineInputFormat(), new Path("input/word.txt")).build();
 
         DataStreamSource<String> fileSource = env.fromSource(source, WatermarkStrategy.noWatermarks(), "fileSource");
 
-        SingleOutputStreamOperator<Tuple2<String, Integer>> flatMapSource = fileSource
+        SingleOutputStreamOperator<Tuple2<String, Integer>> flatMapStream = fileSource
                 .flatMap(new FlatMapFunction<String, Tuple2<String, Integer>> (){
                     @Override
                     public void flatMap(String value, Collector<Tuple2<String, Integer>> out) throws Exception {
@@ -39,7 +40,7 @@ public class Test {
                     }
                 });
 
-        KeyedStream<Tuple2<String, Integer>, String> keyedStream = flatMapSource
+        KeyedStream<Tuple2<String, Integer>, String> keyedStream = flatMapStream
                 .keyBy(new KeySelector<Tuple2<String, Integer>, String>() {
                     @Override
                     public String getKey(Tuple2<String, Integer> value) throws Exception {
@@ -48,37 +49,20 @@ public class Test {
                 });
 
         SingleOutputStreamOperator<Tuple2<String, Integer>> sumStream = keyedStream.sum(1);
-
         sumStream.print();
+
+//        SingleOutputStreamOperator<Tuple2<String, Integer>> reduceStream = keyedStream
+//                .reduce(new ReduceFunction<Tuple2<String, Integer>>() {
+//                    @Override
+//                    public Tuple2<String, Integer> reduce(Tuple2<String, Integer> value1, Tuple2<String, Integer> value2) throws Exception {
+//                        Integer count = value1.f1 + value2.f1;
+//                        return Tuple2.of(value1.f0, count);
+//                    }
+//                });
+//        reduceStream.print();
 
         env.execute();
 
-//        SingleOutputStreamOperator<Tuple2<String, Integer>> aaa = flatMapSource
-//                .keyBy(tuple -> tuple._1)
-//                .map(new RichMapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
-//                    @Override
-//                    public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
-//                        Integer count = state.get(value._1);
-//                        count = count == null ? 1 : count + 1;
-//                        state.put(value._1, count);
-//                        return new Tuple2<String, Integer>(value._1, count);
-//                    }
-//
-//                    MapState<String, Integer> state;
-//
-//                    @Override
-//                    public void open(OpenContext openContext) throws Exception {
-//                        MapStateDescriptor<String, Integer> descriptor = new MapStateDescriptor<>("是否是新用户", String.class, Integer.class);
-//                        this.state = getRuntimeContext().getMapState(descriptor);
-//                    }
-//                });
-//
-//        aaa.print();
-
-//        env.execute();
-
-
     }
-
 
 }
